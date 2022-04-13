@@ -1,6 +1,7 @@
 package com.yibao.securitydemo.config;
 
 import com.yibao.securitydemo.filter.LoginFilter;
+import com.yibao.securitydemo.filter.LoginKaptchaFilter;
 import com.yibao.securitydemo.handler.CustomAuthenticationEntryPoint;
 import com.yibao.securitydemo.handler.CustomAuthenticationFailureHandler;
 import com.yibao.securitydemo.handler.CustomAuthenticationSuccessHandler;
@@ -48,21 +49,26 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     // 自定义 filter (交予工厂管理)
     @Bean
-    public LoginFilter loginFilter() throws Exception {
-        LoginFilter loginFilter = new LoginFilter();
-        loginFilter.setUsernameParameter("username");       // 指定接收 json -- 灵活写法
-        loginFilter.setPasswordParameter("password");
-        loginFilter.setAuthenticationManager(authenticationManagerBean());
-        loginFilter.setAuthenticationSuccessHandler(new CustomAuthenticationSuccessHandler());      // 认证成功处理
-        loginFilter.setAuthenticationFailureHandler(new CustomAuthenticationFailureHandler());      // 认证失败处理
-        loginFilter.setFilterProcessesUrl("/doLogin");    // 指定认证 url
+    public LoginKaptchaFilter loginFilter() throws Exception {
+//        LoginFilter loginFilter = new LoginFilter();   // 账号密码验证
+        LoginKaptchaFilter loginKaptchaFilter = new LoginKaptchaFilter();   // 账号密码 + 验证码
 
-        return loginFilter;
+
+        loginKaptchaFilter.setUsernameParameter("username");       // 指定接收 json -- 灵活写法
+        loginKaptchaFilter.setPasswordParameter("password");
+        loginKaptchaFilter.setKaptchaParamter("kaptcha");       // 验证码
+        loginKaptchaFilter.setAuthenticationManager(authenticationManagerBean());
+        loginKaptchaFilter.setAuthenticationSuccessHandler(new CustomAuthenticationSuccessHandler());      // 认证成功处理
+        loginKaptchaFilter.setAuthenticationFailureHandler(new CustomAuthenticationFailureHandler());      // 认证失败处理
+        loginKaptchaFilter.setFilterProcessesUrl("/doLogin");    // 指定认证 url
+
+        return loginKaptchaFilter;
     }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests()
+                .mvcMatchers("/getVerifyCode").permitAll()    // 放行：生成验证码
                 .anyRequest().authenticated()      // 所有请求都需要认证
                 .and()
                 .formLogin()
