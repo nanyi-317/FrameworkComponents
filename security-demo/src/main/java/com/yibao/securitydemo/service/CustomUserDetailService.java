@@ -6,6 +6,7 @@ import com.yibao.securitydemo.entity.User;
 import com.yibao.securitydemo.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsPasswordService;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,7 @@ import java.util.List;
  * @create 2022 -04 -12 -17:38
  */
 @Service
-public class CustomUserDetailService implements UserDetailsService {
+public class CustomUserDetailService implements UserDetailsService , UserDetailsPasswordService {
 
     private final UserMapper userMapper;
 
@@ -39,6 +40,18 @@ public class CustomUserDetailService implements UserDetailsService {
         List<Role> roles = userMapper.queryRolesByUid(user.getId());
         user.setRoles(roles);
         // 3.返回对象
+        return user;
+    }
+
+    @Override
+    public UserDetails updatePassword(UserDetails user, String newPassword) {
+        // 修改密码
+        User one = userMapper.selectOne(new QueryWrapper<User>().eq("username", user.getUsername()));
+        one.setPassword(newPassword);
+        int num = userMapper.updateById(one);
+        if (num == 1) {
+            ((User) user).setPassword(newPassword);
+        }
         return user;
     }
 }

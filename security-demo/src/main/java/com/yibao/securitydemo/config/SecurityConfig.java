@@ -15,7 +15,12 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
@@ -28,6 +33,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     // 自定义数据源
     private final CustomUserDetailService customUserDetailService;
+
+    // 密码加密方式（如果此处声明，则默认固定使用声明的方式）
+//    @Bean
+//    public PasswordEncoder BcryptPasswordEncoder() {
+//        return new BCryptPasswordEncoder();
+//    }
 
     @Autowired
     public SecurityConfig(CustomUserDetailService customUserDetailService) {
@@ -49,20 +60,20 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     // 自定义 filter (交予工厂管理)
     @Bean
-    public LoginKaptchaFilter loginFilter() throws Exception {
-//        LoginFilter loginFilter = new LoginFilter();   // 账号密码验证
-        LoginKaptchaFilter loginKaptchaFilter = new LoginKaptchaFilter();   // 账号密码 + 验证码
+    public LoginFilter loginFilter() throws Exception {
+        LoginFilter loginFilter = new LoginFilter();   // 账号密码验证
+//        LoginKaptchaFilter loginKaptchaFilter = new LoginKaptchaFilter();   // 账号密码 + 验证码
 
 
-        loginKaptchaFilter.setUsernameParameter("username");       // 指定接收 json -- 灵活写法
-        loginKaptchaFilter.setPasswordParameter("password");
-        loginKaptchaFilter.setKaptchaParamter("kaptcha");       // 验证码
-        loginKaptchaFilter.setAuthenticationManager(authenticationManagerBean());
-        loginKaptchaFilter.setAuthenticationSuccessHandler(new CustomAuthenticationSuccessHandler());      // 认证成功处理
-        loginKaptchaFilter.setAuthenticationFailureHandler(new CustomAuthenticationFailureHandler());      // 认证失败处理
-        loginKaptchaFilter.setFilterProcessesUrl("/doLogin");    // 指定认证 url
+        loginFilter.setUsernameParameter("username");       // 指定接收 json -- 灵活写法
+        loginFilter.setPasswordParameter("password");
+//        loginKaptchaFilter.setKaptchaParamter("kaptcha");       // 验证码
+        loginFilter.setAuthenticationManager(authenticationManagerBean());
+        loginFilter.setAuthenticationSuccessHandler(new CustomAuthenticationSuccessHandler());      // 认证成功处理
+        loginFilter.setAuthenticationFailureHandler(new CustomAuthenticationFailureHandler());      // 认证失败处理
+        loginFilter.setFilterProcessesUrl("/doLogin");    // 指定认证 url
 
-        return loginKaptchaFilter;
+        return loginFilter;
     }
 
     @Override
@@ -72,6 +83,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .anyRequest().authenticated()      // 所有请求都需要认证
                 .and()
                 .formLogin()
+//                .and()
+//                .rememberMe()   // 开启记住我功能
+//                .rememberMeServices(rememberMeServices())
                 .and()
                 .logout()
                 .logoutRequestMatcher(new OrRequestMatcher(       // 自定义登出url，并设置请求方式
@@ -81,11 +95,20 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .logoutSuccessHandler(new CustomLogoutSuccessHandler())   // 注销成功处理
                 .and()
                 .exceptionHandling()
-                .authenticationEntryPoint(new CustomAuthenticationEntryPoint())    // 认证异常处理
+//                .authenticationEntryPoint(new CustomAuthenticationEntryPoint())    // 认证异常处理
                 .and()
                 .csrf().disable();     // 跨域
 
         // 用自定义的 filter 替换原有的账户密码验证 filter ( 并保证filter执行顺序 )
         http.addFilterAt(loginFilter(), UsernamePasswordAuthenticationFilter.class);
+
     }
+
+    // 记住我
+//    public RememberMeServices rememberMeServices() {
+//        return new PersistentTokenBasedRememberMeServices(
+//                "key",     // 自定义生成令牌的 key，默认为 UUID
+//                userDetailsService()    // 认证数据源
+//                , new JdbcTokenRepositoryImpl());    // 令牌存储方式
+//    }
 }
